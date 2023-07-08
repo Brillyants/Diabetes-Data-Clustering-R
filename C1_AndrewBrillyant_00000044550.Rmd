@@ -1,0 +1,305 @@
+---
+title: "DBSCAN Clustering"
+author: "CL Andrew Brillyant 00000044550"
+date: "2021"
+output:  openintro::lab_report
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Calling all libraries needed
+library(readxl)
+library(dbscan)
+library(fpc)
+library(caret)
+library(ggplot2)
+library(tidyverse)
+library(knitr) 
+library(cluster)
+library(factoextra)
+library(purrr)
+
+```
+
+## DATA EXPLORATION, DATA UNDERSTANDING, REPLACING ZERO VALUES, AND DATA VISUALIZATION
+
+```{r}
+#======== DATA EXPLORATION AND UNDERSTANDING ========
+
+#Read Pima Indians Diabetes Dataset
+dat <- read_excel("C1_AndrewBrillyant_00000044550.xlsx")
+
+#Showing all attributes
+names(dat)
+
+#Showing summary of data
+summary(dat)
+
+#Showing 6 rows of data
+head(dat)
+
+#Showing structure of data
+str(dat)
+
+#Checking missing values
+sum_na <- sapply(dat, function(y) sum(length(which(is.na(y)))))
+sum_na <- data.frame(sum_na)
+sum_na
+
+#======== REPLACING ZERO VALUES ========
+
+#Replacing zero values in GLucose variable with mean
+glucose_mean <- mean(dat$Glucose[dat$Glucose > 0])
+dat$Glucose <-
+  ifelse(dat$Glucose == 0, round(glucose_mean, 0), dat$Glucose)
+
+#Replacing zero values in BloodPressure variable with mean
+bloodpressure_mean <- mean(dat$BloodPressure[dat$BloodPressure > 0])
+dat$BloodPressure <-
+  ifelse(dat$BloodPressure == 0, round(bloodpressure_mean, 0), dat$BloodPressure)
+
+#Replacing zero values in SkinThickness variable with mean
+skinthickness_mean <- mean(dat$SkinThickness[dat$Glucose > 0])
+dat$SkinThickness <-
+  ifelse(dat$SkinThickness == 0, round(skinthickness_mean, 0), dat$Glucose)
+
+#Replacing zero values in Insulin variable with mean
+insulin_mean <- mean(dat$Insulin[dat$Insulin > 0])
+dat$Insulin <-
+  ifelse(dat$Insulin == 0, round(insulin_mean, 0), dat$Insulin)
+
+#Replacing zero values in BMI variable with mean
+BMI_mean <- mean(dat$BMI [dat$BMI  > 0])
+dat$BMI  <-
+  ifelse(dat$BMI  == 0, round(BMI_mean, 0), dat$BMI )
+
+#Display summary of data that has been changed
+summary(dat)
+
+```
+
+## DATA VISUALIZATION AND CORRELATION PLOT
+
+```{r}
+#======== DATA vISUALIZATION ========
+
+#Boxplot for Pregnancies
+boxplot(dat$Pregnancies, main = "Boxplot Pregnancies by Andrew Brillyant 44550")
+
+#Outlier in Pregnancies
+outlier1 <- boxplot(dat$Pregnancies, plot = FALSE)$out
+outlier1
+
+#Boxplot for Glucose
+boxplot(dat$Glucose, main = "Boxplot Glucose by Andrew Brillyant 44550")
+
+#Outlier in Glucose
+outlier2 <- boxplot(dat$Glucose, plot = FALSE)$out
+outlier2
+
+#Boxplot for BloodPressure
+boxplot(dat$BloodPressure, main = "Boxplot BloodPressure by Andrew Brillyant 44550")
+
+#Outlier in BloodPressure
+outlier3 <- boxplot(dat$BloodPressure, plot = FALSE)$out
+outlier3
+
+#Boxplot for SkinThickness
+boxplot(dat$SkinThickness, main = "Boxplot SkinThickness by Andrew Brillyant 44550")
+
+#Outlier in SkinThickness
+outlier4 <- boxplot(dat$SkinThickness, plot = FALSE)$out
+outlier4
+
+#Boxplot for Insulin
+boxplot(dat$Insulin, main = "Boxplot Insulin by Andrew Brillyant 44550")
+
+#Outlier in Insulin
+outlier5 <- boxplot(dat$Insulin, plot = FALSE)$out
+outlier5
+
+#Boxplot for BMI
+boxplot(dat$BMI, main = "Boxplot BMI by Andrew Brillyant 44550")
+
+#Outlier in BMI
+outlier6 <- boxplot(dat$BMI, plot = FALSE)$out
+outlier6
+
+#Boxplot for DiabetesPedigreeFunction
+boxplot(dat$DiabetesPedigreeFunction, main = "Boxplot DiabetesPedigreeFunction by Andrew Brillyant 44550")
+
+#Outlier in DiabetesPedigreeFunction
+outlier7 <- boxplot(dat$DiabetesPedigreeFunction, plot = FALSE)$out
+outlier7
+
+#Boxplot for Age
+boxplot(dat$Age, main = "Boxplot Age by Andrew Brillyant 44550")
+
+#Outlier in Age
+outlier8 <- boxplot(dat$Age, plot = FALSE)$out
+outlier8
+
+```
+
+## Implement DBSCAN to Dataset
+
+```{r}
+#======== CREATING DATA TRAINING AND DATA TESTING (80:20) ========
+
+nim <- 44550
+set.seed(nim)
+datSample <- sample(nrow(dat), 0.8 * nrow(dat))
+training <- dat[datSample, ]
+testing <- dat[-datSample, ]
+
+nrow(dat)
+#Sum of data = 768
+nrow(training)
+#Sum of training data = 614
+nrow(testing)
+#Sum of testing data = 154
+
+#Only use Glucose and Age Variable
+training_2 <- training[,c(2,8)]
+testing_2 <- testing[,c(2,8)]
+str(training_2)
+str(testing_2)
+
+#======== Implementing DBSCAN Training ========
+
+#Find suitable eps
+dbscan::kNNdistplot(training_2, k = 3)
+epsilon <- 5
+abline(h = epsilon, lty = 2)
+
+dbfpc <- fpc::dbscan(training_2, eps = epsilon, MinPts = 10)
+dbfpc
+
+#Visualize cluster fpc
+factoextra::fviz_cluster(dbfpc, data = training_2, geom = "point")
+
+dbdb <- dbscan::dbscan(training_2, eps = epsilon, minPts = 10)
+dbdb
+
+#Visualize cluster dbscan
+factoextra::fviz_cluster(dbdb, data = training_2, geom = "point")
+
+g <- ggplot(training_2, aes(Glucose, Age)) + labs(col = "Outcome")
+g1 <- g + geom_point(aes(col = training$Outcome)) + ggtitle("Original Data")
+g2 <- g + geom_point(aes(col = factor(dbfpc$cluster+1))) + ggtitle("fpc")
+g3 <- g + geom_point(aes(col = factor(dbdb$cluster+1))) + ggtitle("dbscan")
+gridExtra::grid.arrange(g1,g2,g3, nrow = 3)
+
+#======== Prediction vs Truth Training ========
+
+new_dat <- data.frame(dbdb$cluster, training$Outcome)
+table(dbdb$cluster, training$Outcome)
+
+#Remove cluster observation that equals to zero (noise)
+new_dat <- subset(new_dat, dbdb$cluster != 0)
+new_dat$dbdb.cluster <- ifelse(new_dat$dbdb.cluster == 1,0,1)
+
+#Convert db cluster and class label to categorical
+data_dbdb <- as.factor(new_dat$dbdb.cluster)
+outcome <- as.factor(new_dat$training.Outcome)
+table_conf <- table(data_dbdb,outcome)
+
+confusionMatrix(table_conf)
+
+#======== Implementing DBSCAN Testing ========
+
+#Find suitable eps
+dbscan::kNNdistplot(testing_2, k = 3)
+epsilon <- 9
+abline(h = epsilon, lty = 2)
+
+dbdb2 <- dbscan::dbscan(testing_2, eps = epsilon, minPts = 5)
+dbdb2
+
+factoextra::fviz_cluster(dbdb2, data = testing_2, geom = "point")
+
+g <- ggplot(testing_2, aes(Glucose, Age)) + labs(col = "Outcome")
+g1 <- g + geom_point(aes(col = testing$Outcome)) + ggtitle("Original Data")
+g2 <- g + geom_point(aes(col = factor(dbdb2$cluster+1))) + ggtitle("dbscan")
+gridExtra::grid.arrange(g1,g2, nrow = 2)
+
+#======== Prediction vs Truth Testing ========
+
+new_dat <- data.frame(dbdb2$cluster, testing$Outcome)
+table(dbdb2$cluster, testing$Outcome)
+
+new_dat <- subset(new_dat, dbdb2$cluster != 0)
+new_dat$dbdb2.cluster <- ifelse(new_dat$dbdb2.cluster == 1,0,1)
+
+data_dbdb2 <- as.factor(new_dat$dbdb2.cluster)
+outcome2 <- as.factor(new_dat$testing.Outcome)
+table_conf2 <- table(data_dbdb2,outcome2)
+
+confusionMatrix(table_conf2)
+
+```
+
+## Compare DBSCAN with K-Means
+
+```{r}
+#======== CREATING DATA TRAINING AND DATA TESTING (80:20) ========
+
+nim <- 44550
+set.seed(nim)
+datSample <- sample(nrow(dat), 0.8 * nrow(dat))
+training <- dat[datSample, ]
+testing <- dat[-datSample, ]
+
+nrow(dat)
+#Sum of data = 768
+nrow(training)
+#Sum of training data = 614
+nrow(testing)
+#Sum of testing data = 154
+
+#Only use Glucose and Age Variable
+training_2 <- training[,c(2,8)]
+testing_2 <- testing[,c(2,8)]
+str(training_2)
+str(testing_2)
+
+#Finding the suitable cluster on training data using Silhouette
+fviz_nbclust(training_2, kmeans, method = "silhouette")
+
+#Finding the suitable cluster on testing data using Silhouette
+fviz_nbclust(testing_2, kmeans, method = "silhouette")
+
+#Conclusion: suitable cluster (k) = 2
+
+#Implementing kmeans on training data
+clusterFinal1 <- kmeans(training_2, 2, nstart = 100)
+
+#Implementing kmeans on testing data
+clusterFinal2 <- kmeans(testing_2, 2, nstart = 100)
+
+#Visualize model on training data
+fviz_cluster(list(data = training_2, cluster = clusterFinal1$cluster))
+#Visualize model on testing data
+fviz_cluster(list(data = testing_2, cluster = clusterFinal2$cluster))
+
+#Validation using testing data
+dat2 <- data.frame(clusterFinal2$cluster, testing$Outcome)
+dat2 <- subset(dat2, clusterFinal2$cluster != 0)
+str(dat2)
+
+dat2$clusterFinal2.cluster <- ifelse(dat2$clusterFinal2.cluster == 1, 0, 1)
+dat2$clusterFinal2.cluster
+
+Cluster2 <- as.factor(dat2$clusterFinal2.cluster)
+testing$Outcome <- as.factor(testing$Outcome) 
+
+str(Cluster2)
+str(testing$Outcome)
+
+confusionMatrix(Cluster2, testing$Outcome)
+
+#Conclusion: Cluster made by DBScan and K-Means algorithm have the same (simiar) accuracy based on conf matrix validation, around 72-74%
+
+```
+

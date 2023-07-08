@@ -1,0 +1,103 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(knitr) 
+library(cluster)
+library(factoextra)
+library(caret)
+library(purrr)
+```
+
+```{r, echo=TRUE}
+#Input data
+dat <- read_excel("C1_AndrewBrillyant_00000044550.xlsx")
+view(dat)
+str(dat)
+summary(dat)
+
+#======== REPLACING ZERO VALUES ========
+
+#Replacing zero values in GLucose variable with mean
+glucose_mean <- mean(dat$Glucose[dat$Glucose > 0])
+dat$Glucose <-
+  ifelse(dat$Glucose == 0, round(glucose_mean, 0), dat$Glucose)
+
+#Replacing zero values in BloodPressure variable with mean
+bloodpressure_mean <- mean(dat$BloodPressure[dat$BloodPressure > 0])
+dat$BloodPressure <-
+  ifelse(dat$BloodPressure == 0, round(bloodpressure_mean, 0), dat$BloodPressure)
+
+#Replacing zero values in SkinThickness variable with mean
+skinthickness_mean <- mean(dat$SkinThickness[dat$Glucose > 0])
+dat$SkinThickness <-
+  ifelse(dat$SkinThickness == 0, round(skinthickness_mean, 0), dat$Glucose)
+
+#Replacing zero values in Insulin variable with mean
+insulin_mean <- mean(dat$Insulin[dat$Insulin > 0])
+dat$Insulin <-
+  ifelse(dat$Insulin == 0, round(insulin_mean, 0), dat$Insulin)
+
+#Replacing zero values in BMI variable with mean
+BMI_mean <- mean(dat$BMI [dat$BMI  > 0])
+dat$BMI  <-
+  ifelse(dat$BMI  == 0, round(BMI_mean, 0), dat$BMI )
+
+#Display summary of data that has been changed
+summary(dat)
+view(dat)
+
+#CREATING DATA TRAINING AND DATA TESTING (80:20)
+nim <- 44550
+set.seed(nim)
+datSample <- sample(nrow(dat), 0.8 * nrow(dat))
+training <- dat[datSample, ]
+testing <- dat[-datSample, ]
+
+nrow(dat)
+#Sum of data = 768
+nrow(training)
+#Sum of training data = 614
+nrow(testing)
+#Sum of testing data = 154
+
+#Only use Glucose and Age Variable
+training_2 <- training[,c(2,8)]
+testing_2 <- testing[,c(2,8)]
+str(training_2)
+str(testing_2)
+
+#Finding the suitable cluster on training data using Silhouette
+fviz_nbclust(training_2, kmeans, method = "silhouette")
+#Finding the suitable cluster on testing data using Silhouette
+fviz_nbclust(testing_2, kmeans, method = "silhouette")
+#Conclusion: suitable cluster (k) = 2
+
+#Implementing kmeans on training data
+clusterFinal1 <- kmeans(training_2, 2, nstart = 100)
+#Implementing kmeans on testing data
+clusterFinal2 <- kmeans(testing_2, 2, nstart = 100)
+
+#Visualize model on training data
+fviz_cluster(list(data = training_2, cluster = clusterFinal1$cluster))
+#Visualize model on testing data
+fviz_cluster(list(data = testing_2, cluster = clusterFinal2$cluster))
+
+#Validation using testing data
+dat2 <- data.frame(clusterFinal2$cluster, testing$Outcome)
+dat2 <- subset(dat2, clusterFinal2$cluster != 0)
+str(dat2)
+
+dat2$clusterFinal2.cluster <- ifelse(dat2$clusterFinal2.cluster == 1, 0, 1)
+dat2$clusterFinal2.cluster
+
+Cluster2 <- as.factor(dat2$clusterFinal2.cluster)
+testing$Outcome <- as.factor(testing$Outcome) 
+
+str(Cluster2)
+str(testing$Outcome)
+
+confusionMatrix(Cluster2, testing$Outcome)
+
+```
